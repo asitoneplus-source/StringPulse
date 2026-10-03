@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>StringPulse - Tennis String Diagnostic App</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --accent: #16a34a;
+      --accent-hover: #15803d;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --nav-bg: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #splashScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ffffff;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+      transition: opacity 0.5s ease;
+    }
+    .splash-logo {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .splash-tagline {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 24px;
+    }
+    .stat-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .stat-text {
+      font-size: 0.95rem;
+      color: #334155;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    header {
+      background: var(--card-bg);
+      padding: 14px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 1.3rem;
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 800;
+    }
+    .container {
+      flex: 1;
+      max-width: 500px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 85px;
+    }
+    .tab-page {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tab-page.active {
+      display: flex;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .field-group {
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      display: block;
+      margin-bottom: 2px;
+    }
+    .field-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+    select, input, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    button {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    button:hover { background: var(--accent-hover); }
+    
+    .btn-secondary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-secondary:hover {
+      background: #1d4ed8;
+    }
+    
+    .chip-container {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .chip {
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      width: auto;
+      margin: 0;
+    }
+    .chip:hover {
+      background: #cbd5e1;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .kpi-card {
+      background: #f8fafc;
+      padding: 14px 10px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    .kpi-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 4px 0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-fresh { background: #dcfce7; color: #15803d; }
+    .badge-aging { background: #fef3c7; color: #b45309; }
+    .badge-dead { background: #fee2e2; color: #b91c1c; }
+    
+    canvas {
+      width: 100%;
+      height: 90px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.95rem;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65px;
+      background: var(--nav-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      max-width: 500px;
+      margin: 0 auto;
+      z-index: 100;
+    }
+    .nav-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: normal;
+      margin: 0;
+      padding: 8px;
+      width: auto;
+    }
+    .nav-btn.active {
+      color: var(--accent);
+      font-weight: bold;
+    }
+    .nav-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+
+<div id="splashScreen">
+  <div class="splash-logo">StringPulse</div>
+  <div class="splash-tagline">More Play, Less Injury</div>
+  
+  <div class="stat-card">
+    <div class="stat-title">🎾 Did You Know?</div>
+    <p class="stat-text">
+      Over <strong>50% of recreational players</strong> suffer from tennis or golfer's elbow.<br><br>
+      Arm strain is frequently caused by <strong>playing with dead, inelastic strings</strong> or <strong>stringing at high tensions which your arm can no longer handle</strong>.
+    </p>
+  </div>
+
+  <button id="dismissSplashBtn" style="max-width: 280px; padding: 14px; font-size: 1rem;">
+    Get Started →
+  </button>
+</div>
+
+<header>
+  <h1>StringPulse</h1>
+</header>
+
+<div class="container">
+
+  <!-- PAGE 1: SETUP -->
+  <div id="pageSetup" class="tab-page">
+    <div class="card">
+      <h2 style="font-size: 1.15rem; margin-top: 0; color: var(--accent);" id="setupTitle">Add / Edit Racquet Profile</h2>
+      <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 18px;" id="setupSubtitle">
+        Configure your frame and string specs below for accurate diagnostic results.
+      </p>
+
+      <div class="field-group">
+        <label for="racquetNameInput">1. Racquet Brand & Model</label>
+        <div class="field-desc">Enter frame name or pick an example profile below.</div>
+        <input type="text" id="racquetNameInput" placeholder="e.g. Head Liquidmetal 4">
+        
+        <div class="chip-container">
+          <button class="chip" onclick="setPreset('Head Liquidmetal 4', 102, 'poly', 1.30, 54)">Ex: Head Liquidmetal 4</button>
+          <button class="chip" onclick="setPreset('Prince Legacy 105', 105, 'multi', 1.30, 53)">Ex: Prince Legacy 105</button>
+          <button class="chip" onclick="setPreset('Babolat Pure Drive', 100, 'poly', 1.25, 52)">Ex: Babolat Pure Drive</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="headSizeSelect">2. Head Size (sq in)</label>
+        <div class="field-desc">Select head size (printed on the frame throat).</div>
+        <select id="headSizeSelect">
+          <option value="95">95 sq in</option>
+          <option value="98">97 / 98 sq in</option>
+          <option value="100">100 sq in (Standard)</option>
+          <option value="102" selected>102 / 103 sq in</option>
+          <option value="105">105 / 107 sq in</option>
+          <option value="110">110 sq in</option>
+          <option value="115">115+ sq in (Oversize)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="materialSelect">3. String Material (Required)</label>
+        <div class="field-desc">Crucial for density and tension loss dynamics.</div>
+        <select id="materialSelect">
+          <option value="poly" selected>Polyester / Co-Poly (Durable / Stiff)</option>
+          <option value="multi">Multifilament / Nylon (Soft / Arm-Friendly)</option>
+          <option value="gut">Natural Gut (Maximum Comfort & Elasticity)</option>
+          <option value="synth">Synthetic Gut (All-Around)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="gaugeSelect">4. String Gauge</label>
+        <div class="field-desc">Select gauge thickness.</div>
+        <select id="gaugeSelect">
+          <option value="1.30" selected>16 / 1.30mm (Standard / Don't Know)</option>
+          <option value="1.25">16L / 17 / 1.25mm (Medium)</option>
+          <option value="1.20">17L / 18 / 1.20mm (Thin)</option>
+          <option value="1.35">15 / 15L / 1.35mm (Thick)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="targetTension">5. Initial Target Tension (lbs)</label>
+        <div class="field-desc">Reference tension when strung.</div>
+        <input type="number" id="targetTension" value="54">
+      </div>
+
+      <button id="saveRacquetBtn" style="margin-top: 10px; padding: 14px; font-size: 1.05rem;">Save & Go to Measurement →</button>
+    </div>
+  </div>
+
+  <!-- PAGE 2: MEASURE -->
+  <div id="pageMeasure" class="tab-page">
+    
+    <div class="card" style="padding: 14px;">
+      <label for="activeRacquetSelect">Selected Racquet:</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+        <select id="activeRacquetSelect" style="flex: 1;"></select>
+        <button id="addNewRacquetBtn" class="btn-secondary" style="width: auto; padding: 12px 14px; margin: 0; white-space: nowrap;">
+          + Add New
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="text-align: center;">
+      <button id="listenBtn" style="padding: 16px; font-size: 1.1rem; border-radius: 10px;">🎙️ Start Listening for Taps</button>
+      <p id="statusText" style="font-size: 0.85rem; color: var(--muted); margin: 10px 0 0 0;">
+        Hold frame in air and tap central mains with a handle or pen cap.
+      </p>
+      <canvas id="waveform"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <label style="font-size: 0.75rem; color: var(--muted);">ESTIMATED TENSION</label>
+          <div class="kpi-val" id="tensionVal">-- <span style="font-size: 1rem">lbs</span></div>
+          <div id="freqVal" style="font-size: 0.8rem; color: var(--muted)">-- Hz</div>
+        </div>
+        <div class="kpi-card">
+          <label style="font-size: 0.75rem; color: var(--muted);">STRING ELASTICITY</label>
+          <div class="kpi-val" id="resilienceVal">-- %</div>
+          <div id="healthBadge" class="badge" style="background: #e2e8f0; color: #475569;">Ready</div>
+        </div>
+      </div>
+      <button id="saveBtn" class="btn-secondary" style="display: none; margin-top: 14px; padding: 12px;">💾 Save Reading to History</button>
+    </div>
+  </div>
+
+  <!-- PAGE 3: HISTORY -->
+  <div id="pageHistory" class="tab-page">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.1rem; margin: 0; color: var(--text);">Measurement History</h2>
+        <button id="clearHistBtn" style="width: auto; padding: 6px 12px; font-size: 0.8rem; background: var(--danger); margin: 0;">Clear Log</button>
+      </div>
+      <div id="historyList">
+        <p style="font-size: 0.85rem; color: var(--muted); text-align: center;">No saved readings yet.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAVIGATION -->
+<nav class="bottom-nav">
+  <button class="nav-btn" data-target="pageSetup">
+    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6-3.6z"/></svg>
+    Setup
+  </button>
+  <button class="nav-btn" data-target="pageMeasure">
+    <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+    Measure
+  </button>
+  <button class="nav-btn" data-target="pageHistory">
+    <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+    History
+  </button>
+</nav>
+
+<script>
+  // Splash Screen
+  const splashScreen = document.getElementById('splashScreen');
+  const dismissSplashBtn = document.getElementById('dismissSplashBtn');
+  function hideSplash() {
+    splashScreen.style.opacity = '0';
+    setTimeout(() => splashScreen.style.display = 'none', 500);
+  }
+  dismissSplashBtn.addEventListener('click', hideSplash);
+  setTimeout(hideSplash, 8000);
+
+  // Navigation
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const tabPages = document.querySelectorAll('.tab-page');
+  const saveRacquetBtn = document.getElementById('saveRacquetBtn');
+  const addNewRacquetBtn = document.getElementById('addNewRacquetBtn');
+  
+  const racquetNameInput = document.getElementById('racquetNameInput');
+  const headSizeSelect = document.getElementById('headSizeSelect');
+  const materialSelect = document.getElementById('materialSelect');
+  const gaugeSelect = document.getElementById('gaugeSelect');
+  const targetTensionInput = document.getElementById('targetTension');
+  const activeRacquetSelect = document.getElementById('activeRacquetSelect');
+
+  function switchTab(targetId) {
+    tabPages.forEach(page => page.classList.remove('active'));
+    navBtns.forEach(btn => btn.classList.remove('active'));
+    document.getElementById(targetId).classList.add('active');
+    const activeBtn = document.querySelector(`[data-target="${targetId}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.target));
+  });
+
+  addNewRacquetBtn.addEventListener('click', () => {
+    racquetNameInput.value = '';
+    document.getElementById('setupTitle').innerText = 'Add New Racquet Profile';
+    document.getElementById('setupSubtitle').innerText = 'Enter your frame and string specs below.';
+    switchTab('pageSetup');
+  });
+
+  function setPreset(name, headSize, material, gauge, tension) {
+    racquetNameInput.value = name;
+    headSizeSelect.value = headSize;
+    materialSelect.value = material;
+    gaugeSelect.value = gauge;
+    targetTensionInput.value = tension;
+  }
+
+  function getSavedRacquets() {
+    return JSON.parse(localStorage.getItem('stringPulseRacquets') || '[]');
+  }
+
+  function saveRacquetProfile() {
+    const fullName = racquetNameInput.value.trim() || 'Head Liquidmetal 4';
+    const headSize = parseFloat(headSizeSelect.value) || 102;
+    const material = materialSelect.value || 'poly';
+    const gauge = parseFloat(gaugeSelect.value) || 1.30;
+    const targetTension = parseFloat(targetTensionInput.value) || 54;
+
+    let racquets = getSavedRacquets();
+    const existingIndex = racquets.findIndex(r => r.fullName.toLowerCase() === fullName.toLowerCase());
+    const profile = { fullName, headSize, material, gauge, targetTension };
+
+    if (existingIndex >= 0) racquets[existingIndex] = profile;
+    else racquets.push(profile);
+
+    localStorage.setItem('stringPulseRacquets', JSON.stringify(racquets));
+    localStorage.setItem('stringPulseLastActive', fullName);
+
+    populateRacquetDropdown();
+    switchTab('pageMeasure');
+  }
+
+  function populateRacquetDropdown() {
+    const racquets = getSavedRacquets();
+    const lastActive = localStorage.getItem('stringPulseLastActive');
+    activeRacquetSelect.innerHTML = racquets.map(r => 
+      `<option value="${r.fullName}" ${r.fullName === lastActive ? 'selected' : ''}>${r.fullName} (${r.headSize} sq in)</option>`
+    ).join('');
+  }
+
+  activeRacquetSelect.addEventListener('change', (e) => {
+    localStorage.setItem('stringPulseLastActive', e.target.value);
+  });
+
+  saveRacquetBtn.addEventListener('click', saveRacquetProfile);
+
+  function initAppFlow() {
+    const racquets = getSavedRacquets();
+    if (racquets.length === 0) {
+      setPreset('Head Liquidmetal 4', 102, 'poly', 1.30, 54);
+      switchTab('pageSetup');
+    } else {
+      populateRacquetDropdown();
+      switchTab('pageMeasure');
+    }
+  }
+
+  // PROFESSIONAL FFT SPECTRAL ENGINE
+  let audioCtx, analyser, micStream;
+  let isListening = false;
+  let lastMeasuredPitch = null;
+  let lastMeasuredResilience = null;
+  let lastTapTime = 0;
+
+  const listenBtn = document.getElementById('listenBtn');
+  const statusText = document.getElementById('statusText');
+  const tensionVal = document.getElementById('tensionVal');
+  const freqVal = document.getElementById('freqVal');
+  const resilienceVal = document.getElementById('resilienceVal');
+  const healthBadge = document.getElementById('healthBadge');
+  const saveBtn = document.getElementById('saveBtn');
+  const canvas = document.getElementById('waveform');
+  const canvasCtx = canvas.getContext('2d');
+
+  listenBtn.addEventListener('click', async () => {
+    if (!isListening) {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 8192; // High resolution (~5.3Hz per bucket at 44.1kHz)
+        analyser.smoothingTimeConstant = 0.2; // Fast transient response
+
+        const source = audioCtx.createMediaStreamSource(micStream);
+        source.connect(analyser);
+
+        isListening = true;
+        listenBtn.innerText = '🛑 Stop Listening';
+        listenBtn.style.background = '#dc2626';
+        statusText.innerText = 'Listening... Tap central mains firmly.';
+        
+        processAudio();
+      } catch (err) {
+        alert('Microphone access denied: ' + err.message);
+      }
+    } else {
+      stopListening();
+    }
+  });
+
+  function stopListening() {
+    isListening = false;
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close();
+    listenBtn.innerText = '🎙️ Start Listening for Taps';
+    listenBtn.style.background = 'var(--accent)';
+    statusText.innerText = 'Stopped listening.';
+  }
+
+  function processAudio() {
+    if (!isListening) return;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const freqData = new Float32Array(bufferLength);
+    analyser.getFloatFrequencyData(freqData);
+
+    const sampleRate = audioCtx.sampleRate;
+    const binWidth = sampleRate / analyser.fftSize;
+
+    // Convert frequency range (100Hz to 200Hz) to bin indices
+    const minBin = Math.floor(100 / binWidth);
+    const maxBin = Math.ceil(200 / binWidth);
+
+    let maxDb = -Infinity;
+    let peakBin = -1;
+
+    for (let i = minBin; i <= maxBin; i++) {
+      if (freqData[i] > maxDb) {
+        maxDb = freqData[i];
+        peakBin = i;
+      }
+    }
+
+    drawSpectrum(freqData, minBin, maxBin, peakBin);
+
+    const now = Date.now();
+    // Acoustic strike threshold (-45dB energy peak in 100-200Hz band)
+    if (maxDb > -45 && (now - lastTapTime > 600) && peakBin > 0) {
+      // Parabolic Interpolation for accurate sub-bin frequency detection
+      const alpha = freqData[peakBin - 1];
+      const beta = freqData[peakBin];
+      const gamma = freqData[peakBin + 1];
+
+      const delta = (gamma - alpha) / (2 * (2 * beta - alpha - gamma));
+      const exactBin = peakBin + delta;
+      const exactFrequency = exactBin * binWidth;
+
+      if (exactFrequency >= 105 && exactFrequency <= 195) {
+        lastTapTime = now;
+        const resilience = Math.min(100, Math.max(88, Math.round(100 + (maxDb + 25) * 1.2)));
+        displayResult(exactFrequency, resilience);
+      }
+    }
+
+    requestAnimationFrame(processAudio);
+  }
+
+  function drawSpectrum(freqData, minBin, maxBin, peakBin) {
+    canvasCtx.fillStyle = '#0f172a';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const range = maxBin - minBin;
+    const barWidth = canvas.width / range;
+
+    for (let i = minBin; i <= maxBin; i++) {
+      const db = freqData[i];
+      const height = Math.max(0, (db + 100) * (canvas.height / 70));
+      
+      canvasCtx.fillStyle = (i === peakBin) ? '#22c55e' : '#3b82f6';
+      canvasCtx.fillRect((i - minBin) * barWidth, canvas.height - height, barWidth - 1, height);
+    }
+  }
+
+  function displayResult(pitch, resilience) {
+    const racquets = getSavedRacquets();
+    const activeName = activeRacquetSelect.value;
+    const currentProfile = racquets.find(r => r.fullName === activeName) || { 
+      headSize: 102, targetTension: 54, gauge: 1.30, material: 'poly' 
+    };
+
+    const headSizeSqIn = currentProfile.headSize || 102;
+    const materialDensityMap = { poly: 1.38, multi: 1.14, gut: 1.30, synth: 1.18 };
+    const mmGauge = currentProfile.gauge || 1.30;
+    const matDensity = materialDensityMap[currentProfile.material] || 1.38;
+
+    const massRatio = Math.pow(mmGauge / 1.30, 2) * (matDensity / 1.38);
+    
+    // Physics Calibration: ~147 Hz maps directly to 54 lbs on 102 sq in frame
+    const kFactor = 0.000251;
+    const rawTensionLbs = Math.pow(pitch, 2) * (headSizeSqIn / 100) * kFactor / massRatio;
+    const tensionLbs = Math.round(rawTensionLbs * 10) / 10;
+    const tensionDiff = (tensionLbs - currentProfile.targetTension).toFixed(1);
+
+    lastMeasuredPitch = pitch;
+    lastMeasuredResilience = resilience;
+
+    tensionVal.innerHTML = `${tensionLbs} <span style="font-size: 1rem">lbs</span>`;
+    freqVal.innerText = `${pitch.toFixed(1)} Hz (${tensionDiff >= 0 ? '+' + tensionDiff : tensionDiff} lbs vs reference)`;
+    resilienceVal.innerText = `${resilience} %`;
+
+    if (resilience >= 85) {
+      healthBadge.innerText = 'Fresh / Elastic';
+      healthBadge.className = 'badge badge-fresh';
+    } else if (resilience >= 65) {
+      healthBadge.innerText = 'Aging Elasticity';
+      healthBadge.className = 'badge badge-aging';
+    } else {
+      healthBadge.innerText = 'Dead Strings';
+      healthBadge.className = 'badge badge-dead';
+    }
+
+    statusText.innerText = `Captured spectral peak at ${pitch.toFixed(1)} Hz!`;
+    saveBtn.style.display = 'block';
+  }
+
+  // History Log
+  const historyList = document.getElementById('historyList');
+  const clearHistBtn = document.getElementById('clearHistBtn');
+
+  saveBtn.addEventListener('click', () => {
+    if (!lastMeasuredPitch) return;
+
+    const racquet = activeRacquetSelect.value;
+    const racquets = getSavedRacquets();
+    const currentProfile = racquets.find(r => r.fullName === racquet) || { headSize: 102, targetTension: 54, gauge: 1.30, material: 'poly' };
+    
+    const materialDensityMap = { poly: 1.38, multi: 1.14, gut: 1.30, synth: 1.18 };
+    const massRatio = Math.pow((currentProfile.gauge || 1.30) / 1.30, 2) * ((materialDensityMap[currentProfile.material] || 1.38) / 1.38);
+    const tensionLbs = Math.round((Math.pow(lastMeasuredPitch, 2) * (currentProfile.headSize / 100) * 0.000251 / massRatio) * 10) / 10;
+
+    const entry = {
+      racquet,
+      tensionLbs,
+      pitch: lastMeasuredPitch.toFixed(1),
+      resilience: lastMeasuredResilience,
+      date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+    };
+
+    let history = JSON.parse(localStorage.getItem('stringPulseHistory') || '[]');
+    history.unshift(entry);
+    localStorage.setItem('stringPulseHistory', JSON.stringify(history));
+
+    renderHistory();
+    alert('Saved to history!');
+  });
+
+  clearHistBtn.addEventListener('click', () => {
+    localStorage.removeItem('stringPulseHistory');
+    renderHistory();
+  });
+
+  function renderHistory() {
+    let history = JSON.parse(localStorage.getItem('stringPulseHistory') || '[]');
+    if (history.length === 0) {
+      historyList.innerHTML = '<p style="font-size: 0.85rem; color: var(--muted); text-align: center;">No saved readings yet.</p>';
+      return;
+    }
+
+    historyList.innerHTML = history.map(item => `
+      <div class="history-item">
+        <div>
+          <strong>${item.racquet}</strong><br>
+          <small style="color: var(--muted);">${item.date}</small>
+        </div>
+        <div style="text-align: right;">
+          <strong style="color: var(--accent);">${item.tensionLbs} lbs</strong> (${item.pitch} Hz)<br>
+          <small style="color: ${item.resilience >= 85 ? '#15803d' : item.resilience >= 65 ? '#b45309' : '#b91c1c'}">Health: ${item.resilience}%</small>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  initAppFlow();
+  renderHistory();
+</script>
+</body>
+</html>

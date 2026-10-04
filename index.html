@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>StringPulse - Relative Tension Diagnostics</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --accent: #16a34a;
+      --accent-hover: #15803d;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+      --danger: #dc2626;
+      --primary: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0; padding: 0; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    header { background: var(--card-bg); padding: 14px; text-align: center; border-bottom: 1px solid var(--border); }
+    h1 { font-size: 1.3rem; margin: 0; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+    
+    .container { flex: 1; max-width: 480px; width: 100%; margin: 0 auto; padding: 16px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px; }
+    
+    label { font-size: 0.85rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 6px; }
+    input, select, button { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; }
+    
+    button { background: var(--accent); color: #fff; font-weight: bold; border: none; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+    button:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--primary); }
+    .btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    
+    .meter-container { background: #e2e8f0; height: 18px; border-radius: 9px; overflow: hidden; margin: 12px 0; position: relative; }
+    .meter-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.05s ease-out; }
+    .meter-zones { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); }
+    
+    .status-badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; }
+    .badge-quiet { background: #e2e8f0; color: #475569; }
+    .badge-good { background: #dcfce7; color: #15803d; }
+    .badge-loud { background: #fee2e2; color: #b91c1c; }
+
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .kpi-card { background: #f8fafc; padding: 16px 10px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+    .kpi-val { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 6px 0; }
+
+    canvas { width: 100%; height: 90px; background: #0f172a; border-radius: 8px; margin-top: 12px; }
+    
+    .step-indicator { font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--primary); letter-spacing: 0.5px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>StringPulse</h1>
+</header>
+
+<div class="container">
+
+  <!-- SCREEN 1: RACQUET PROFILE & MODE SELECT -->
+  <div id="screen1" class="screen active">
+    <div class="card">
+      <div class="step-indicator">Step 1 of 3</div>
+      <h2 style="font-size: 1.1rem; margin: 0 0 14px 0;">Racquet Profile & Objective</h2>
+      
+      <div style="margin-bottom: 14px;">
+        <label for="racquetNameInput">Racquet Identifier</label>
+        <input type="text" id="racquetNameInput" value="Racquet #1">
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label for="refTensionInput">Strung Reference Tension (lbs)</label>
+        <input type="number" id="refTensionInput" value="54" min="30" max="75">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label for="modeSelect">Diagnostic Objective</label>
+        <select id="modeSelect">
+          <option value="measure">Measure Tension Loss vs Baseline</option>
+          <option value="baseline">Set New Initial Baseline (Day 1)</option>
+        </select>
+      </div>
+
+      <button id="toScreen2Btn" class="btn-secondary">Next: Calibrate Microphone ➔</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: MIC CHECK & SIGNAL GATE -->
+  <div id="screen2" class="screen">
+    <div class="card" style="text-align: center;">
+      <div class="step-indicator" style="text-align: left;">Step 2 of 3</div>
+      <h2 style="font-size: 1.1rem; margin: 0 0 8px 0; text-align: left;">Microphone Calibration</h2>
+      <p style="font-size: 0.85rem; color: var(--muted); text-align: left; margin: 0 0 16px 0;">
+        Tap central main strings once with a plastic pen cap to calibrate signal level.
+      </p>
+
+      <div style="margin: 16px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 0.85rem; font-weight: bold;">Signal Status:</span>
+          <span id="micStatusBadge" class="status-badge badge-quiet">Waiting for Tap</span>
+        </div>
+
+        <div class="meter-container">
+          <div id="meterBar" class="meter-bar"></div>
+        </div>
+        <div class="meter-zones">
+          <span>Too Quiet</span>
+          <span>Optimal Target</span>
+          <span>Too Loud</span>
+        </div>
+      </div>
+
+      <div id="calibratedNotice" style="display: none; background: #dcfce7; border: 1px solid #86efac; color: #15803d; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; margin-bottom: 14px;">
+        ✓ Signal Calibrated! Microphone Ready.
+      </div>
+
+      <button id="toScreen3Btn" style="display: none;">Continue to Measurement ➔</button>
+      <button id="backToScreen1Btn" class="btn-outline" style="margin-top: 8px;">← Back to Profile</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: DIAGNOSTIC MEASUREMENT & RESULTS -->
+  <div id="screen3" class="screen">
+    <div class="card" style="text-align: center;">
+      <div class="step-indicator" style="text-align: left;">Step 3 of 3</div>
+      <h2 id="screen3Title" style="font-size: 1.1rem; margin: 0 0 12px 0; text-align: left;">Measure Tension Loss</h2>
+      
+      <button id="takeMeasurementBtn">🎙️ Start Diagnostic Tap</button>
+      
+      <p id="statusText" style="font-size: 0.85rem; color: var(--muted); margin-top: 10px;">
+        Hold frame by handle in open air and tap central mains firmly.
+      </p>
+
+      <canvas id="waveform"></canvas>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <label style="font-size: 0.7rem; color: var(--muted);">TENSION LOSS</label>
+          <div class="kpi-val" id="tensionLossVal">-- %</div>
+          <div id="estTensionVal" style="font-size: 0.8rem; color: var(--muted)">-- lbs current</div>
+        </div>
+        <div class="kpi-card">
+          <label style="font-size: 0.7rem; color: var(--muted);">STRING ELASTICITY</label>
+          <div class="kpi-val" id="elasticityVal">-- %</div>
+          <div id="healthBadge" class="status-badge badge-quiet">Ready</div>
+        </div>
+      </div>
+
+      <button id="restartBtn" class="btn-outline" style="margin-top: 16px;">New Measurement Session</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let audioCtx, analyser, micStream, filterNode;
+  let isCalibrating = false;
+  let isMeasuring = false;
+  let isProcessingStrike = false;
+  let micCalibrated = false;
+  
+  let amplitudeHistory = [];
+  let lastTapTime = 0;
+  let savedBaselineHz = null;
+
+  const screen1 = document.getElementById('screen1');
+  const screen2 = document.getElementById('screen2');
+  const screen3 = document.getElementById('screen3');
+
+  const racquetNameInput = document.getElementById('racquetNameInput');
+  const refTensionInput = document.getElementById('refTensionInput');
+  const modeSelect = document.getElementById('modeSelect');
+
+  const micStatusBadge = document.getElementById('micStatusBadge');
+  const meterBar = document.getElementById('meterBar');
+  const calibratedNotice = document.getElementById('calibratedNotice');
+  
+  const toScreen2Btn = document.getElementById('toScreen2Btn');
+  const toScreen3Btn = document.getElementById('toScreen3Btn');
+  const backToScreen1Btn = document.getElementById('backToScreen1Btn');
+  const takeMeasurementBtn = document.getElementById('takeMeasurementBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  const screen3Title = document.getElementById('screen3Title');
+  const statusText = document.getElementById('statusText');
+  const tensionLossVal = document.getElementById('tensionLossVal');
+  const estTensionVal = document.getElementById('estTensionVal');
+  const elasticityVal = document.getElementById('elasticityVal');
+  const healthBadge = document.getElementById('healthBadge');
+  const canvasCtx = document.getElementById('waveform').getContext('2d');
+
+  function showScreen(screen) {
+    [screen1, screen2, screen3].forEach(s => s.classList.remove('active'));
+    screen.classList.add('active');
+  }
+
+  function stopAudio() {
+    isCalibrating = false;
+    isMeasuring = false;
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+  }
+
+  async function initAudio() {
+    stopAudio();
+    
+    // Explicit Chrome-compatible mic constraints (disable browser processing)
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    });
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Resume Chrome suspended audio thread
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+    
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.setValueAtTime(220, audioCtx.currentTime);
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 8192;
+    analyser.smoothingTimeConstant = 0.1;
+
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(filterNode);
+    filterNode.connect(analyser);
+  }
+
+  // SCREEN 1 -> SCREEN 2
+  toScreen2Btn.addEventListener('click', async () => {
+    try {
+      await initAudio();
+      showScreen(screen2);
+      isCalibrating = true;
+      micCalibrated = false;
+      calibratedNotice.style.display = 'none';
+      toScreen3Btn.style.display = 'none';
+      runCalibrationLoop();
+    } catch (err) {
+      alert('Microphone access denied or unsupported: ' + err.message);
+    }
+  });
+
+  backToScreen1Btn.addEventListener('click', () => {
+    stopAudio();
+    showScreen(screen1);
+  });
+
+  function runCalibrationLoop() {
+    if (!isCalibrating) return;
+
+    const timeBuffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(timeBuffer);
+
+    let maxAmp = 0;
+    for (let i = 0; i < timeBuffer.length; i++) {
+      if (Math.abs(timeBuffer[i]) > maxAmp) maxAmp = Math.abs(timeBuffer[i]);
+    }
+
+    let db = 20 * Math.log10(Math.max(maxAmp, 0.001));
+    let pct = Math.min(100, Math.max(0, ((db + 60) / 60) * 100));
+    meterBar.style.width = pct + '%';
+
+    if (db >= -38 && db <= -12 && !micCalibrated) {
+      micCalibrated = true;
+      micStatusBadge.innerText = 'CALIBRATED';
+      micStatusBadge.className = 'status-badge badge-good';
+      meterBar.style.background = '#16a34a';
+      
+      calibratedNotice.style.display = 'block';
+      toScreen3Btn.style.display = 'block';
+    } else if (!micCalibrated) {
+      if (db > -12) {
+        micStatusBadge.innerText = 'Too Loud / Clipping';
+        micStatusBadge.className = 'status-badge badge-loud';
+      } else {
+        micStatusBadge.innerText = 'Listening for Tap...';
+        micStatusBadge.className = 'status-badge badge-quiet';
+      }
+    }
+
+    requestAnimationFrame(runCalibrationLoop);
+  }
+
+  // SCREEN 2 -> SCREEN 3
+  toScreen3Btn.addEventListener('click', async () => {
+    isCalibrating = false;
+    showScreen(screen3);
+    
+    if (modeSelect.value === 'baseline') {
+      screen3Title.innerText = 'Set Initial Baseline';
+      takeMeasurementBtn.innerText = '📌 Record Baseline';
+      takeMeasurementBtn.style.background = '#d97706';
+    } else {
+      screen3Title.innerText = 'Measure Tension Loss';
+      takeMeasurementBtn.innerText = '🎙️ Start Loss Diagnostic';
+      takeMeasurementBtn.style.background = '#16a34a';
+    }
+  });
+
+  takeMeasurementBtn.addEventListener('click', async () => {
+    if (!isMeasuring) {
+      await initAudio();
+      isMeasuring = true;
+      amplitudeHistory = [];
+      takeMeasurementBtn.innerText = '🛑 Stop Listening';
+      takeMeasurementBtn.style.background = '#dc2626';
+      statusText.innerText = 'Listening for tap sound...';
+      processDiagnosticLoop();
+    } else {
+      stopAudio();
+      resetMeasurementButton();
+    }
+  });
+
+  function resetMeasurementButton() {
+    isMeasuring = false;
+    if (modeSelect.value === 'baseline') {
+      takeMeasurementBtn.innerText = '📌 Record Baseline';
+      takeMeasurementBtn.style.background = '#d97706';
+    } else {
+      takeMeasurementBtn.innerText = '🎙️ Start Loss Diagnostic';
+      takeMeasurementBtn.style.background = '#16a34a';
+    }
+  }
+
+  function processDiagnosticLoop() {
+    if (!isMeasuring) return;
+
+    const timeBuffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(timeBuffer);
+
+    let maxAmp = 0;
+    for (let i = 0; i < timeBuffer.length; i++) {
+      if (Math.abs(timeBuffer[i]) > maxAmp) maxAmp = Math.abs(timeBuffer[i]);
+    }
+
+    const now = Date.now();
+    amplitudeHistory.push({ time: now, amp: maxAmp });
+    if (amplitudeHistory.length > 60) amplitudeHistory.shift();
+
+    drawWaveform(timeBuffer);
+
+    if (maxAmp > 0.02 && (now - lastTapTime > 800) && !isProcessingStrike) {
+      isProcessingStrike = true;
+      lastTapTime = now;
+      const strikeTime = now;
+
+      setTimeout(() => {
+        analyzeTap(strikeTime);
+        isProcessingStrike = false;
+      }, 220);
+    }
+
+    requestAnimationFrame(processDiagnosticLoop);
+  }
+
+  function analyzeTap(strikeTime) {
+    const postTransientItem = amplitudeHistory.find(item => item.time >= strikeTime + 40) || { amp: 0.1 };
+    const decayedItem = amplitudeHistory.find(item => item.time >= strikeTime + 180) || { amp: 0.02 };
+    let dampingRatio = postTransientItem.amp > 0 ? (decayedItem.amp / postTransientItem.amp) : 0.25;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const freqData = new Float32Array(bufferLength);
+    analyser.getFloatFrequencyData(freqData);
+
+    const binWidth = audioCtx.sampleRate / analyser.fftSize;
+    const minBin = Math.floor(110 / binWidth);
+    const maxBin = Math.ceil(190 / binWidth);
+
+    let maxDb = -Infinity;
+    let peakBin = -1;
+
+    for (let i = minBin; i <= maxBin; i++) {
+      if (freqData[i] > maxDb) {
+        maxDb = freqData[i];
+        peakBin = i;
+      }
+    }
+
+    if (peakBin > 0) {
+      const alpha = freqData[peakBin - 1] || maxDb;
+      const beta = freqData[peakBin];
+      const gamma = freqData[peakBin + 1] || maxDb;
+      const delta = (gamma - alpha) / (2 * (2 * beta - alpha - gamma) || 1);
+      
+      const exactFrequency = (peakBin + delta) * binWidth;
+
+      if (modeSelect.value === 'baseline') {
+        savedBaselineHz = exactFrequency;
+        stopAudio();
+        resetMeasurementButton();
+        statusText.innerText = `Baseline locked for ${racquetNameInput.value}: ${savedBaselineHz.toFixed(1)} Hz!`;
+        tensionLossVal.innerText = `0.0 %`;
+        estTensionVal.innerText = `${refTensionInput.value} lbs (${savedBaselineHz.toFixed(1)} Hz Baseline)`;
+        elasticityVal.innerText = `100 %`;
+        healthBadge.innerText = 'BASELINE SET';
+        healthBadge.className = 'status-badge badge-good';
+      } else {
+        calculateLossFromBaseline(exactFrequency, dampingRatio);
+      }
+    }
+  }
+
+  function calculateLossFromBaseline(currentHz, dampingRatio) {
+    const refTensionLbs = parseFloat(refTensionInput.value) || 54;
+    const baselineHz = savedBaselineHz || 145.0;
+
+    const tensionLossPct = (1 - Math.pow(currentHz / baselineHz, 2)) * 100;
+    const remainingLbs = refTensionLbs * Math.pow(currentHz / baselineHz, 2);
+    let elasticityScore = Math.round(Math.min(100, Math.max(30, (dampingRatio / 0.35) * 100)));
+
+    tensionLossVal.innerText = `-${Math.max(0, tensionLossPct).toFixed(1)} %`;
+    estTensionVal.innerText = `${remainingLbs.toFixed(1)} lbs (${currentHz.toFixed(1)} Hz)`;
+    elasticityVal.innerText = `${elasticityScore} %`;
+
+    if (tensionLossPct < 10) {
+      healthBadge.innerText = 'OPTIMAL TENSION';
+      healthBadge.className = 'status-badge badge-good';
+    } else if (tensionLossPct < 20) {
+      healthBadge.innerText = 'NOTICEABLE LOSS';
+      healthBadge.className = 'status-badge badge-quiet';
+    } else {
+      healthBadge.innerText = 'DEAD / REPLACE';
+      healthBadge.className = 'status-badge badge-loud';
+    }
+
+    statusText.innerText = `Measured ${currentHz.toFixed(1)} Hz vs ${baselineHz.toFixed(1)} Hz baseline.`;
+    stopAudio();
+    resetMeasurementButton();
+  }
+
+  function drawWaveform(buffer) {
+    canvasCtx.fillStyle = '#0f172a';
+    canvasCtx.fillRect(0, 0, canvasCtx.canvas.width, 90);
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = '#22c55e';
+    canvasCtx.beginPath();
+
+    const sliceWidth = canvasCtx.canvas.width / buffer.length;
+    let x = 0;
+
+    for (let i = 0; i < buffer.length; i++) {
+      const v = buffer[i] * 2;
+      const y = (v * 90 / 2) + (90 / 2);
+      if (i === 0) canvasCtx.moveTo(x, y);
+      else canvasCtx.lineTo(x, y);
+      x += sliceWidth;
+    }
+    canvasCtx.lineTo(canvasCtx.canvas.width, 45);
+    canvasCtx.stroke();
+  }
+
+  restartBtn.addEventListener('click', () => {
+    stopAudio();
+    showScreen(screen1);
+  });
+</script>
+</body>
+</html>
